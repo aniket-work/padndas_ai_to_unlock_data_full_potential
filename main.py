@@ -19,10 +19,10 @@ model = ChatGroq(
     model="llama3-70b-8192"
 )
 
-st.title("Data analysis with PandasAI Agent")
+st.title("AI Agent powered Comprehensive 360° Feedback Collection and Analysis")
 
 uploaded_file = st.sidebar.file_uploader(
-    "Upload a CSV file",
+    "Upload Employee provided 360° Feedback",
     type=["csv"]
 )
 
@@ -31,14 +31,14 @@ if uploaded_file is not None:
     st.write(data.head(3))
 
     agent = Agent(data, config={"llm": model})
-    prompt = st.text_input("Enter your prompt:")
+    prompt = st.text_input("What Analysis you like to run :")
 
     if st.button("Generate"):
         if prompt:
             with st.spinner("Generating response..."):
                 response = agent.chat(prompt)
                 print(response)
-                if "temp_chart.png" in response:
+                if "temp_chart.png" in str(response):
                     st.image(response)
                 else:
                     st.write(response)
