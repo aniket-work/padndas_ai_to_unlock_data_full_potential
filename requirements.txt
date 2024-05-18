@@ -1,9 +1,10 @@
+pydantic==1.10.7
+langchain-core==0.0.7
+crewai==0.30.11
+crewai-tools==0.2.6
+langchain-openai==0.1.1
+langchain-groq==0.1.4
+langchain-groq
+streamlit
 pandas
 pandasai
-streamlit
-pyyaml
-langchain_groq
-python-dotenv
-crewai
-crewai[tools]
-google-search-results>=2.4.2

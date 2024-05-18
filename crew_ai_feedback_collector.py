@@ -1,12 +1,12 @@
 from textwrap import dedent
-from crewai import Agent, Task
+from crewai import Agent, Crew, Task
+from langchain_core.tools import Tool
+from langchain.tools import Tool
 from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
 from crewai_tools import FileReadTool
 import os
 from dotenv import load_dotenv
-import csv
-import random
 
 class FeedbackAgents:
     def __init__(self, use_groq=False):
@@ -26,6 +26,12 @@ class FeedbackAgents:
             )
 
     def feedback_collection_agent(self):
+        feedback_collection_tool = Tool(
+            name="FeedbackCollectionTool",
+            description="A tool to collect feedback from employees",
+            func=lambda: input("Please provide your feedback:"),
+            verbose=True
+        )
         return Agent(
             role="Feedback Collector",
             goal=dedent("""
@@ -38,7 +44,7 @@ class FeedbackAgents:
                 feel comfortable and your keen listening skills ensure you capture valuable
                 insights into their experiences and suggestions for improvement.
             """),
-            tools=[],
+            tools=[feedback_collection_tool],
             llm=self.llm,
             verbose=True,
             max_iterations=25,
@@ -46,7 +52,6 @@ class FeedbackAgents:
         )
 
     def feedback_analysis_agent(self):
-        feedback_file_read_tool = FileReadTool(file_path="database/employee_feedback.json")
         return Agent(
             role="Feedback Analyst",
             goal=dedent("""
@@ -58,7 +63,7 @@ class FeedbackAgents:
                 enable you to pinpoint recurring themes and provide a clear summary of the strengths and
                 areas needing improvement based on employee feedback.
             """),
-            tools=[feedback_file_read_tool],
+            tools=[],
             llm=self.llm,
             verbose=True,
             max_iterations=25
@@ -84,52 +89,29 @@ class FeedbackAgents:
         )
 
 class FeedbackTasks:
-    def __init__(self, agent):
-        self.agent = agent
+    def __init__(self):
+        pass
 
-    def feedback_collection_task(self):
+    def feedback_collection_task(self, agent):
         task_description = dedent(f"""\
             You are the Feedback Collector agent responsible for gathering detailed feedback from employees
             regarding their experiences, satisfaction, and suggestions for improvement.
         """)
-        return Task(description=task_description, agent=self.agent, expected_output="")
+        return Task(description=task_description, agent=agent, expected_output="")
 
-    def feedback_analysis_task(self):
+    def feedback_analysis_task(self, agent):
         task_description = dedent(f"""\
             You are the Feedback Analyst agent responsible for analyzing the collected feedback to identify
             common themes, strengths, and areas for improvement.
         """)
-        return Task(description=task_description, agent=self.agent, expected_output="")
+        return Task(description=task_description, agent=agent, expected_output="")
 
-    def feedback_report_task(self):
+    def feedback_report_task(self, agent):
         task_description = dedent(f"""\
             You are the Feedback Reporter agent responsible for compiling a comprehensive report based on the
             analyzed feedback, highlighting key insights and actionable recommendations.
         """)
-        return Task(description=task_description, agent=self.agent, expected_output="")
-
-# Function to simulate gathering feedback
-def gather_feedback(num_employees=100):
-    feedback_data = []
-    for i in range(1, num_employees + 1):
-        feedback = {
-            "Employee": f"Employee {i}",
-            "Management": random.randint(1, 10),
-            "Work-Life Balance": random.randint(1, 10),
-            "Compensation": random.randint(1, 10),
-            "Career Growth": random.randint(1, 10),
-            "Company Culture": random.randint(1, 10),
-        }
-        feedback_data.append(feedback)
-    return feedback_data
-
-# Function to write feedback data to CSV
-def write_feedback_to_csv(feedback_data, filename="employee_feedback.csv"):
-    with open(filename, mode='w', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=feedback_data[0].keys())
-        writer.writeheader()
-        for row in feedback_data:
-            writer.writerow(row)
+        return Task(description=task_description, agent=agent, expected_output="")
 
 # Create agents
 agents = FeedbackAgents(use_groq=True)
@@ -138,12 +120,23 @@ feedback_analysis_agent = agents.feedback_analysis_agent()
 feedback_report_agent = agents.feedback_report_agent()
 
 # Create tasks for each agent
-feedback_collection_task = FeedbackTasks(feedback_collection_agent).feedback_collection_task()
-feedback_analysis_task = FeedbackTasks(feedback_analysis_agent).feedback_analysis_task()
-feedback_report_task = FeedbackTasks(feedback_report_agent).feedback_report_task()
+feedback_tasks = FeedbackTasks()
+feedback_collection_task = feedback_tasks.feedback_collection_task(feedback_collection_agent)
+feedback_analysis_task = feedback_tasks.feedback_analysis_task(feedback_analysis_agent)
+feedback_report_task = feedback_tasks.feedback_report_task(feedback_report_agent)
 
-# Gather feedback dynamically
-feedback_data = gather_feedback()
+# Create crew
+feedback_crew = Crew(
+    agents=[feedback_collection_agent, feedback_analysis_agent, feedback_report_agent],
+    tasks=[feedback_collection_task, feedback_analysis_task, feedback_report_task],
+    verbose=True
+)
 
-# Write the feedback data to CSV
-write_feedback_to_csv(feedback_data)
+# Run the feedback process
+result = feedback_crew.kickoff()
+
+# Print the results
+print("\n\n########################")
+print("## Feedback Report")
+print("########################\n")
+print(result)
