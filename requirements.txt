@@ -1,0 +1,9 @@
+pandas
+pandasai
+streamlit
+pyyaml
+langchain_groq
+python-dotenv
+crewai
+crewai[tools]
+google-search-results>=2.4.2
